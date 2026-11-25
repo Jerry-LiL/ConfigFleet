@@ -1,0 +1,29 @@
+---
+name: configfleet-lab
+
+services:
+  ubuntu:
+    build:
+      context: ..
+      dockerfile: docker/ubuntu/Dockerfile
+    image: configfleet-lab-ubuntu:22.04
+    container_name: configfleet-lab-ubuntu
+    privileged: true
+    cgroup: host
+    ports:
+      - "2222:22"
+    volumes:
+      - ../.lab/id_ed25519.pub:/bootstrap/id_ed25519.pub:ro
+
+  centos:
+    build:
+      context: ..
+      dockerfile: docker/centos/Dockerfile
+    image: configfleet-lab-centos:stream9
+    container_name: configfleet-lab-centos
+    privileged: true
+    cgroup: host
+    ports:
+      - "2223:22"
+    volumes:
+      - ../.lab/id_ed25519.pub:/bootstrap/id_ed25519.pub:ro

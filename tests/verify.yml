@@ -1,0 +1,143 @@
+---
+- name: Verify a ConfigFleet node
+  hosts: all
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Confirm the deploy account
+      ansible.builtin.command:
+        cmd: id deploy
+      register: verify_deploy
+      changed_when: false
+
+    - name: Deploy user belongs to the admin group
+      ansible.builtin.assert:
+        that:
+          - "'configfleet' in verify_deploy.stdout"
+          - "'docker' in verify_deploy.stdout"
+
+    - name: Read effective sshd configuration
+      ansible.builtin.command:
+        cmd: sshd -T
+      register: verify_sshd
+      changed_when: false
+
+    - name: Confirm sshd hardening matches the environment
+      ansible.builtin.assert:
+        that:
+          - "'permitrootlogin no' in verify_sshd.stdout"
+          - "'passwordauthentication no' in verify_sshd.stdout"
+          - "'pubkeyauthentication yes' in verify_sshd.stdout"
+          - "'maxauthtries ' ~ (hardening_ssh_max_auth_tries | string) in verify_sshd.stdout"
+
+    - name: Stat the admin sudoers drop-in
+      ansible.builtin.stat:
+        path: /etc/sudoers.d/configfleet-admins
+      register: verify_sudoers
+
+    - name: Admin sudoers file is root-owned and mode 0440
+      ansible.builtin.assert:
+        that:
+          - verify_sudoers.stat.exists
+          - verify_sudoers.stat.mode == "0440"
+
+    - name: Read tcp syncookies
+      ansible.builtin.command:
+        cmd: sysctl -n net.ipv4.tcp_syncookies
+      register: verify_syncookies
+      changed_when: false
+
+    - name: Syncookies are enabled
+      ansible.builtin.assert:
+        that:
+          - verify_syncookies.stdout == "1"
+
+    - name: Read firewall status
+      ansible.builtin.command:
+        cmd: "{{ 'ufw status' if ansible_os_family == 'Debian' else 'firewall-cmd --state' }}"
+      register: verify_firewall
+      changed_when: false
+      when: hardening_manage_firewall | default(true) | bool
+
+    - name: Firewall is enforcing
+      ansible.builtin.assert:
+        that:
+          - >-
+            'Status: active' in verify_firewall.stdout
+            or 'running' in verify_firewall.stdout
+      when: hardening_manage_firewall | default(true) | bool
+
+    - name: Stat the heartbeat environment file
+      ansible.builtin.stat:
+        path: /etc/configfleet/heartbeat.env
+      register: verify_env_file
+
+    - name: Heartbeat environment file is root-only
+      ansible.builtin.assert:
+        that:
+          - verify_env_file.stat.exists
+          - verify_env_file.stat.mode == "0600"
+
+    - name: Read the heartbeat record
+      ansible.builtin.slurp:
+        src: /var/lib/configfleet/heartbeat.json
+      register: verify_heartbeat
+
+    - name: Heartbeat matches this environment and omits the raw token
+      ansible.builtin.assert:
+        that:
+          - (verify_heartbeat.content | b64decode | from_json).environment == configfleet_env
+          - vault_api_token not in ((verify_heartbeat.content | b64decode) ~ "")
+
+    - name: Confirm the heartbeat timer is active
+      ansible.builtin.command:
+        cmd: systemctl status configfleet-heartbeat.timer
+      changed_when: false
+
+    - name: Request the nginx health check
+      ansible.builtin.uri:
+        url: http://127.0.0.1/healthz
+        return_content: true
+        status_code: 200
+      register: verify_health
+
+    - name: Health check returns ok
+      ansible.builtin.assert:
+        that:
+          - verify_health.content == "ok\n"
+
+    - name: Confirm nginx is active
+      ansible.builtin.command:
+        cmd: systemctl status nginx
+      changed_when: false
+
+    - name: Read the Docker daemon configuration
+      ansible.builtin.slurp:
+        src: /etc/docker/daemon.json
+      register: verify_daemon
+
+    - name: Daemon log limit matches the environment
+      ansible.builtin.assert:
+        that:
+          - docker_engine_log_max_size in (verify_daemon.content | b64decode)
+
+    - name: Confirm Docker Engine is active
+      ansible.builtin.command:
+        cmd: systemctl status docker
+      changed_when: false
+
+    - name: Query the Docker daemon
+      ansible.builtin.command:
+        cmd: docker info
+      changed_when: false
+
+    - name: Stat the registry credential file
+      ansible.builtin.stat:
+        path: /root/.docker/config.json
+      register: verify_registry
+
+    - name: Registry credentials are root-only
+      ansible.builtin.assert:
+        that:
+          - verify_registry.stat.exists
+          - verify_registry.stat.mode == "0600"
