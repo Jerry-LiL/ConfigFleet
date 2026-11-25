@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  author: Vineet Kumar
+  description: Create the operator group, user accounts, and SSH keys.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+    - name: EL
+      versions:
+        - "9"
+  galaxy_tags:
+    - users
+    - ssh
+    - linux
+dependencies: []

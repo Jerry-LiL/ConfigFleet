@@ -1,0 +1,9 @@
+[Unit]
+Description=ConfigFleet heartbeat
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/configfleet/heartbeat.env
+ExecStart=/usr/local/sbin/configfleet-heartbeat

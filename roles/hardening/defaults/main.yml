@@ -1,0 +1,43 @@
+---
+hardening_ssh_port: 22
+hardening_ssh_max_auth_tries: 4
+hardening_permit_root_login: "no"
+hardening_password_authentication: "no"
+hardening_login_user: ansible
+hardening_allow_users: "{{ ([hardening_login_user] + (baseline_users | map(attribute='name') | list)) | unique }}"
+hardening_ssh_login_grace_time: 30
+hardening_ssh_client_alive_interval: 300
+hardening_ssh_client_alive_count_max: 2
+hardening_ssh_service: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
+hardening_manage_firewall: true
+hardening_firewall_extra_tcp_ports:
+  - 80
+  - 443
+hardening_pass_max_days: 90
+hardening_pass_min_days: 1
+hardening_pass_warn_age: 14
+hardening_banner_text: |
+  Authorized access only.
+  Disconnect immediately if you are not an approved operator.
+hardening_remove_packages:
+  - telnet
+  - rsh
+  - talk
+hardening_disable_services:
+  - cups
+  - avahi-daemon
+  - rpcbind
+  - nfs-server
+hardening_sysctl:
+  net.ipv4.tcp_syncookies: "1"
+  net.ipv4.conf.all.rp_filter: "1"
+  net.ipv4.conf.default.rp_filter: "1"
+  net.ipv4.conf.all.accept_source_route: "0"
+  net.ipv4.conf.default.accept_source_route: "0"
+  net.ipv4.conf.all.accept_redirects: "0"
+  net.ipv4.conf.default.accept_redirects: "0"
+  net.ipv4.conf.all.send_redirects: "0"
+  net.ipv4.conf.default.send_redirects: "0"
+  net.ipv4.icmp_echo_ignore_broadcasts: "1"
+  net.ipv4.conf.all.log_martians: "1"
+  fs.suid_dumpable: "0"

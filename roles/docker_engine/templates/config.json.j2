@@ -1,0 +1,7 @@
+{
+  "auths": {
+    "{{ docker_engine_registry_server }}": {
+      "auth": "{{ (docker_engine_registry_username ~ ':' ~ docker_engine_registry_password) | b64encode }}"
+    }
+  }
+}

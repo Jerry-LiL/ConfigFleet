@@ -1,0 +1,128 @@
+---
+- name: Install Docker repository prerequisites
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - python3-debian
+    state: present
+  register: docker_engine_apt_prereqs
+  retries: 5
+  delay: 15
+  until: docker_engine_apt_prereqs is succeeded
+  when: ansible_os_family == "Debian"
+
+- name: Configure the Docker apt repository
+  ansible.builtin.deb822_repository:
+    name: docker-ce
+    types: [deb]
+    uris: [https://download.docker.com/linux/ubuntu]
+    suites: ["{{ ansible_distribution_release }}"]
+    components: [stable]
+    architectures: ["{{ docker_engine_apt_architecture }}"]
+    signed_by: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+    enabled: true
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Refresh apt lists for Docker
+  ansible.builtin.apt:
+    update_cache: true
+  changed_when: false
+  register: docker_engine_apt_cache
+  retries: 5
+  delay: 15
+  until: docker_engine_apt_cache is succeeded
+  when: ansible_os_family == "Debian"
+
+- name: Install Docker Engine
+  ansible.builtin.apt:
+    name: "{{ docker_engine_debian_packages }}"
+    state: present
+  register: docker_engine_apt_packages
+  retries: 5
+  delay: 15
+  until: docker_engine_apt_packages is succeeded
+  when: ansible_os_family == "Debian"
+
+- name: Trust the Docker RPM signing key
+  ansible.builtin.rpm_key:
+    key: https://download.docker.com/linux/centos/gpg
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Configure the Docker yum repository
+  ansible.builtin.yum_repository:
+    name: docker-ce
+    description: Docker CE stable
+    baseurl: "https://download.docker.com/linux/centos/{{ ansible_distribution_major_version }}/$basearch/stable"
+    enabled: true
+    gpgcheck: true
+    gpgkey: https://download.docker.com/linux/centos/gpg
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Install Docker Engine
+  ansible.builtin.dnf:
+    name: "{{ docker_engine_redhat_packages }}"
+    state: present
+    allowerasing: true
+  when: ansible_os_family == "RedHat"
+
+- name: Create the Docker configuration directory
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the Docker daemon configuration
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart docker
+
+- name: Add operators to the docker group
+  ansible.builtin.user:
+    name: "{{ docker_engine_account }}"
+    groups: docker
+    append: true
+  loop: "{{ docker_engine_users }}"
+  loop_control:
+    loop_var: docker_engine_account
+    label: "{{ docker_engine_account }}"
+
+- name: Create the root Docker client directory
+  ansible.builtin.file:
+    path: /root/.docker
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when:
+    - docker_engine_configure_registry | bool
+    - docker_engine_registry_password | length > 0
+
+- name: Install registry credentials
+  ansible.builtin.template:
+    src: config.json.j2
+    dest: /root/.docker/config.json
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when:
+    - docker_engine_configure_registry | bool
+    - docker_engine_registry_password | length > 0
+
+- name: Enable Docker Engine
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started

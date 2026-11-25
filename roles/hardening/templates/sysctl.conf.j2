@@ -1,0 +1,4 @@
+# Managed by the ConfigFleet hardening role.
+{% for hardening_key, hardening_value in hardening_sysctl.items() %}
+{{ hardening_key }} = {{ hardening_value }}
+{% endfor %}

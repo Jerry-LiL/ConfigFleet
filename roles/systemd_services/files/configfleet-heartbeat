@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Record a heartbeat without writing the API token to disk.
+set -euo pipefail
+
+state_dir="${CONFIGFLEET_STATE_DIR:-/var/lib/configfleet}"
+env_name="${CONFIGFLEET_ENV:-unknown}"
+token="${CONFIGFLEET_API_TOKEN:-}"
+
+if [[ -z "${token}" ]]; then
+  echo "CONFIGFLEET_API_TOKEN is not set" >&2
+  exit 1
+fi
+
+mkdir -p "${state_dir}"
+fingerprint="$(printf '%s' "${token}" | sha256sum | awk '{print substr($1, 1, 12)}')"
+now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+host_name="$(uname -n)"
+host_name="${host_name%%.*}"
+
+tmp="$(mktemp "${state_dir}/heartbeat.json.tmp.XXXXXX")"
+cat > "${tmp}" <<EOF
+{
+  "hostname": "${host_name}",
+  "environment": "${env_name}",
+  "timestamp": "${now}",
+  "token_fingerprint": "${fingerprint}"
+}
+EOF
+chmod 0644 "${tmp}"
+mv "${tmp}" "${state_dir}/heartbeat.json"

@@ -1,0 +1,71 @@
+---
+- name: Fail when the heartbeat token is missing
+  ansible.builtin.fail:
+    msg: Set systemd_services_api_token from the environment vault.
+  when: systemd_services_api_token | length == 0
+
+- name: Create the ConfigFleet configuration directory
+  ansible.builtin.file:
+    path: /etc/configfleet
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Create the heartbeat state directory
+  ansible.builtin.file:
+    path: "{{ systemd_services_state_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the heartbeat script
+  ansible.builtin.copy:
+    src: configfleet-heartbeat
+    dest: /usr/local/sbin/configfleet-heartbeat
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the heartbeat environment file
+  ansible.builtin.template:
+    src: heartbeat.env.j2
+    dest: /etc/configfleet/heartbeat.env
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Install the heartbeat service unit
+  ansible.builtin.template:
+    src: configfleet-heartbeat.service.j2
+    dest: /etc/systemd/system/configfleet-heartbeat.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install the heartbeat timer unit
+  ansible.builtin.template:
+    src: configfleet-heartbeat.timer.j2
+    dest: /etc/systemd/system/configfleet-heartbeat.timer
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Record an initial heartbeat
+  ansible.builtin.command:
+    cmd: /usr/local/sbin/configfleet-heartbeat
+    creates: "{{ systemd_services_state_dir }}/heartbeat.json"
+  environment:
+    CONFIGFLEET_ENV: "{{ systemd_services_environment }}"
+    CONFIGFLEET_API_TOKEN: "{{ systemd_services_api_token }}"
+    CONFIGFLEET_STATE_DIR: "{{ systemd_services_state_dir }}"
+  no_log: true
+
+- name: Enable the heartbeat timer
+  ansible.builtin.systemd:
+    name: configfleet-heartbeat.timer
+    daemon_reload: true
+    enabled: true
+    state: started

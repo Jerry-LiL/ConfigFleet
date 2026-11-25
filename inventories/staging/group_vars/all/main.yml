@@ -1,0 +1,24 @@
+---
+configfleet_env: staging
+baseline_users:
+  - name: deploy
+    comment: ConfigFleet deploy
+    password_hash: "{{ vault_deploy_password_hash }}"
+    ssh_public_keys: "{{ vault_deploy_ssh_public_keys }}"
+hardening_ssh_max_auth_tries: 4
+hardening_manage_firewall: true
+hardening_banner_text: |
+  ConfigFleet staging node.
+  Access is logged. Disconnect if you are not an operator.
+nginx_proxy_server_name: staging.configfleet.internal
+nginx_proxy_upstream_servers:
+  - 10.20.1.21:8080
+  - 10.20.1.22:8080
+nginx_proxy_client_max_body_size: 16m
+docker_engine_log_max_size: 20m
+docker_engine_log_max_file: "3"
+docker_engine_configure_registry: true
+docker_engine_registry_server: https://registry.staging.configfleet.internal
+docker_engine_registry_username: "{{ vault_registry_username }}"
+docker_engine_registry_password: "{{ vault_registry_password }}"
+systemd_services_api_token: "{{ vault_api_token }}"

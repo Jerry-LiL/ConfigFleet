@@ -1,0 +1,60 @@
+---
+- name: Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Allow required TCP ports through ufw
+  community.general.ufw:
+    rule: allow
+    port: "{{ hardening_port | string }}"
+    proto: tcp
+  loop: "{{ [hardening_ssh_port] + hardening_firewall_extra_tcp_ports }}"
+  loop_control:
+    loop_var: hardening_port
+    label: "{{ hardening_port }}"
+  when: ansible_os_family == "Debian"
+
+- name: Set ufw incoming policy to deny
+  community.general.ufw:
+    direction: incoming
+    policy: deny
+  when: ansible_os_family == "Debian"
+
+- name: Set ufw outgoing policy to allow
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+  when: ansible_os_family == "Debian"
+
+- name: Enable ufw
+  community.general.ufw:
+    state: enabled
+    logging: "off"
+  when: ansible_os_family == "Debian"
+
+- name: Install firewalld
+  ansible.builtin.dnf:
+    name: firewalld
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Enable firewalld
+  ansible.builtin.systemd:
+    name: firewalld
+    enabled: true
+    state: started
+  when: ansible_os_family == "RedHat"
+
+- name: Allow required TCP ports through firewalld
+  ansible.posix.firewalld:
+    port: "{{ hardening_port }}/tcp"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ [hardening_ssh_port] + hardening_firewall_extra_tcp_ports }}"
+  loop_control:
+    loop_var: hardening_port
+    label: "{{ hardening_port }}"
+  when: ansible_os_family == "RedHat"

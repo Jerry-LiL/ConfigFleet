@@ -1,0 +1,4 @@
+---
+systemd_services_environment: "{{ configfleet_env }}"
+systemd_services_state_dir: /var/lib/configfleet
+systemd_services_api_token: ""

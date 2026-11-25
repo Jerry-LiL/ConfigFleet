@@ -1,0 +1,20 @@
+---
+docker_engine_enabled: true
+docker_engine_log_max_size: 20m
+docker_engine_log_max_file: "3"
+docker_engine_live_restore: true
+docker_engine_users:
+  - deploy
+docker_engine_configure_registry: false
+docker_engine_registry_server: https://registry.example.internal
+docker_engine_registry_username: ""
+docker_engine_registry_password: ""
+docker_engine_apt_architecture: "{{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}"
+docker_engine_debian_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+docker_engine_redhat_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io

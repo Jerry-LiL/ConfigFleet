@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Vineet Kumar
+  description: Install the heartbeat script, environment file, and systemd timer.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+    - name: EL
+      versions:
+        - "9"
+  galaxy_tags:
+    - systemd
+    - linux
+dependencies: []

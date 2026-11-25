@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodic ConfigFleet heartbeat
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+AccuracySec=5s
+Persistent=true
+Unit=configfleet-heartbeat.service
+
+[Install]
+WantedBy=timers.target

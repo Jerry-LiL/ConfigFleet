@@ -1,0 +1,11 @@
+---
+profile: production
+exclude_paths:
+  - .venv/
+  - .lab/
+  - .ansible/
+  - collections/
+  - docker/
+  - inventories/**/vault.yml
+strict: false
+offline: false

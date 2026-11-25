@@ -1,0 +1,71 @@
+---
+- name: Fail on an unsupported operating system
+  ansible.builtin.fail:
+    msg: "ConfigFleet supports Debian and RedHat families, not {{ ansible_os_family }}."
+  when: ansible_os_family not in ["Debian", "RedHat"]
+
+- name: Refresh apt package lists
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  changed_when: false
+  register: baseline_apt_cache
+  retries: 5
+  delay: 15
+  until: baseline_apt_cache is succeeded
+  when: ansible_os_family == "Debian"
+
+- name: Install baseline packages
+  ansible.builtin.package:
+    name: "{{ baseline_packages[ansible_os_family] }}"
+    state: present
+  register: baseline_package_install
+  retries: 5
+  delay: 20
+  until: baseline_package_install is succeeded
+
+- name: Set the system timezone
+  community.general.timezone:
+    name: "{{ baseline_timezone }}"
+
+- name: Create the admin group
+  ansible.builtin.group:
+    name: "{{ baseline_admin_group }}"
+    state: present
+
+- name: Install the admin sudoers drop-in
+  ansible.builtin.template:
+    src: sudoers.j2
+    dest: /etc/sudoers.d/configfleet-admins
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Create managed user accounts
+  ansible.builtin.user:
+    name: "{{ baseline_account.name }}"
+    comment: "{{ baseline_account.comment | default(baseline_account.name) }}"
+    group: "{{ baseline_admin_group }}"
+    shell: "{{ baseline_account.shell | default('/bin/bash') }}"
+    password: "{{ baseline_account.password_hash | default(omit) }}"
+    update_password: always
+    create_home: true
+    state: present
+  loop: "{{ baseline_users }}"
+  loop_control:
+    loop_var: baseline_account
+    label: "{{ baseline_account.name }}"
+  no_log: true
+
+- name: Install authorized keys for managed users
+  ansible.posix.authorized_key:
+    user: "{{ baseline_account.name }}"
+    key: "{{ (baseline_account.ssh_public_keys + baseline_additional_ssh_keys) | unique | join('\n') }}"
+    exclusive: true
+    state: present
+  loop: "{{ baseline_users }}"
+  loop_control:
+    loop_var: baseline_account
+    label: "{{ baseline_account.name }}"
+  when: (baseline_account.ssh_public_keys + baseline_additional_ssh_keys) | length > 0

@@ -1,0 +1,32 @@
+---
+configfleet_env: prod
+baseline_users:
+  - name: deploy
+    comment: ConfigFleet deploy
+    password_hash: "{{ vault_deploy_password_hash }}"
+    ssh_public_keys: "{{ vault_deploy_ssh_public_keys }}"
+  - name: breakglass
+    comment: Break-glass operator
+    password_hash: "{{ vault_breakglass_password_hash }}"
+    ssh_public_keys: "{{ vault_breakglass_ssh_public_keys }}"
+hardening_ssh_max_auth_tries: 3
+hardening_manage_firewall: true
+hardening_banner_text: |
+  ConfigFleet production node.
+  Authorized operators only. Sessions are recorded.
+nginx_proxy_server_name: configfleet.internal
+nginx_proxy_upstream_servers:
+  - 10.30.1.21:8080
+  - 10.30.1.22:8080
+  - 10.30.1.23:8080
+nginx_proxy_client_max_body_size: 32m
+docker_engine_log_max_size: 50m
+docker_engine_log_max_file: "5"
+docker_engine_users:
+  - deploy
+  - breakglass
+docker_engine_configure_registry: true
+docker_engine_registry_server: https://registry.configfleet.internal
+docker_engine_registry_username: "{{ vault_registry_username }}"
+docker_engine_registry_password: "{{ vault_registry_password }}"
+systemd_services_api_token: "{{ vault_api_token }}"

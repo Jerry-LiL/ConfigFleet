@@ -1,0 +1,23 @@
+# Managed by the ConfigFleet hardening role.
+Port {{ hardening_ssh_port }}
+UsePAM yes
+UseDNS no
+PermitRootLogin {{ hardening_permit_root_login }}
+PasswordAuthentication {{ hardening_password_authentication }}
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+X11Forwarding no
+AllowTcpForwarding no
+MaxAuthTries {{ hardening_ssh_max_auth_tries }}
+LoginGraceTime {{ hardening_ssh_login_grace_time }}
+ClientAliveInterval {{ hardening_ssh_client_alive_interval }}
+ClientAliveCountMax {{ hardening_ssh_client_alive_count_max }}
+Banner /etc/issue.net
+PrintMotd no
+AcceptEnv LANG LC_*
+Subsystem sftp internal-sftp
+AllowUsers {{ hardening_allow_users | join(' ') }}
+Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512

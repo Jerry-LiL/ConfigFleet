@@ -1,0 +1,28 @@
+---
+baseline_admin_group: configfleet
+baseline_timezone: UTC
+baseline_users: []
+baseline_additional_ssh_keys: []
+baseline_packages:
+  Debian:
+    - ca-certificates
+    - curl
+    - vim
+    - gnupg
+    - acl
+    - rsync
+    - sudo
+    - python3
+    - python3-apt
+    - tzdata
+    - openssh-server
+  RedHat:
+    - ca-certificates
+    - vim-enhanced
+    - gnupg2
+    - acl
+    - rsync
+    - sudo
+    - python3
+    - tzdata
+    - openssh-server

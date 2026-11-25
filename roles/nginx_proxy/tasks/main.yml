@@ -1,0 +1,75 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+  register: nginx_proxy_apt
+  retries: 5
+  delay: 15
+  until: nginx_proxy_apt is succeeded
+  when: ansible_os_family == "Debian"
+
+- name: Install nginx
+  ansible.builtin.dnf:
+    name: nginx
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Check whether the nginx binary is present
+  ansible.builtin.command:
+    cmd: nginx -v
+  register: nginx_proxy_binary
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Install nginx.conf
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "{{ (nginx_proxy_binary.rc == 0) | ternary('nginx -t -c %s', omit) }}"
+  notify:
+    - Validate nginx configuration
+    - Reload nginx
+
+- name: Remove packaged default sites
+  ansible.builtin.file:
+    path: "{{ nginx_proxy_default_site }}"
+    state: absent
+  loop:
+    - /etc/nginx/conf.d/default.conf
+    - /etc/nginx/sites-enabled/default
+  loop_control:
+    loop_var: nginx_proxy_default_site
+    label: "{{ nginx_proxy_default_site }}"
+  notify:
+    - Validate nginx configuration
+    - Reload nginx
+
+- name: Install the reverse proxy site
+  ansible.builtin.template:
+    src: configfleet.conf.j2
+    dest: /etc/nginx/conf.d/configfleet.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Validate nginx configuration
+    - Reload nginx
+
+- name: Allow nginx to open upstream connections
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect
+    state: true
+    persistent: true
+  when: (ansible_facts.selinux | default({})).status | default('disabled') == 'enabled'
+
+- name: Enable nginx
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+    state: started

@@ -1,0 +1,11 @@
+.vault_pass
+.env
+.lab/
+.ansible/
+.venv/
+collections/
+*.retry
+__pycache__/
+*.pyc
+.cache/
+tests/output/

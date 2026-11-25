@@ -1,0 +1,6 @@
+---
+nginx_proxy_server_name: configfleet.internal
+nginx_proxy_upstream_servers:
+  - 127.0.0.1:8080
+nginx_proxy_client_max_body_size: 8m
+nginx_proxy_user: "{{ 'www-data' if ansible_os_family == 'Debian' else 'nginx' }}"

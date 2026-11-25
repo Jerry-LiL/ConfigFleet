@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  author: Vineet Kumar
+  description: Baseline sshd, sysctl, firewall, and account hardening.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - jammy
+    - name: EL
+      versions:
+        - "9"
+  galaxy_tags:
+    - security
+    - firewall
+    - linux
+dependencies: []
